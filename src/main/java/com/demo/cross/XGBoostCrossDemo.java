@@ -63,11 +63,13 @@ public class XGBoostCrossDemo extends AbstractSparkSql {
 		XGBoostEstimator xgBoostEstimator=new XGBoostEstimator( CommonUtil.<String,Object>toScalaImmutableMap(javaMap))
 				.setFeaturesCol("features").setLabelCol("isclick");
 
+
 		BinaryClassificationEvaluator evaluator=new BinaryClassificationEvaluator().setLabelCol("isclick").setRawPredictionCol("probabilities");
 
 
 		ParamMap[] paramGrid=new ParamGridBuilder()
 				.addGrid(xgBoostEstimator.maxDepth(),new int[]{4,6,8})
+				.addGrid(xgBoostEstimator.round(),new int[]{40,70,100})
 //				.addGrid(xgBoostEstimator.eta(),new double[]{0.1,0.2,0.3})
 //				.addGrid(xgBoostEstimator.lambda(),new double[]{0.1,0.3,0.6})
 //				.addGrid(xgBoostEstimator.minChildWeight(),new double[]{1.0,3.0,5.0})

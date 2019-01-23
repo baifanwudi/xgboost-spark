@@ -1,10 +1,12 @@
 package com.demo.ml;
 
+
 import com.demo.base.HDFSFileSystem;
 import com.demo.util.CommonUtil;
 import ml.dmlc.xgboost4j.java.XGBoostError;
 import ml.dmlc.xgboost4j.scala.spark.XGBoostClassificationModel;
 import ml.dmlc.xgboost4j.scala.spark.XGBoostEstimator;
+
 import org.apache.hadoop.fs.Path;
 import org.apache.spark.ml.Pipeline;
 import org.apache.spark.ml.PipelineModel;
@@ -20,6 +22,7 @@ import org.jpmml.model.PMMLUtil;
 import org.jpmml.sparkml.PMMLBuilder;
 
 import javax.xml.bind.JAXBException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
@@ -28,9 +31,9 @@ import java.util.Map;
  * @author allen
  * @date 2019/1/14.
  */
-public class XgboostDemoLocal {
+public class XGBoostLocalDemo {
 
-	public static void main(String[] args) throws IOException, XGBoostError {
+	public static void main(String[] args) throws IOException, XGBoostError, JAXBException {
 
 		SparkSession spark =SparkSession.builder().master("local[*]").getOrCreate();
 
@@ -81,21 +84,22 @@ public class XgboostDemoLocal {
 
 		XGBoostClassificationModel xgBoostClassificationModel=(XGBoostClassificationModel) (pipelineModel.stages()[1]);
 
+		System.out.println(xgBoostClassificationModel.extractParamMap());
 		//evaluate
 		BinaryClassificationEvaluator evaluator=new BinaryClassificationEvaluator().setLabelCol("isclick").setRawPredictionCol("probabilities");
 		Double aucArea=evaluator.evaluate(predictResult);
 		System.out.println("auc is :"+aucArea);
 
 //		pipelineModel.write().overwrite().save("file:///model/xgboost/pipemodel");
+		savePMML(trainData.schema(),pipelineModel);
 
 	}
 
 	private static void savePMML(StructType shcema, PipelineModel pipelineModel) throws IOException, JAXBException {
 		PMML pmml = new PMMLBuilder(shcema, pipelineModel).build();
-//        JAXBUtil.marshalPMML(pmml, new StreamResult(System.out));
 		String targetFile = "/data/twms/traffichuixing/model/xgboost-pmml";
-//        PMMLUtil.marshal(pmml, new FileOutputStream(targetFile));
-		PMMLUtil.marshal(pmml, HDFSFileSystem.fileSystem.create(new Path(targetFile)));
+        PMMLUtil.marshal(pmml, new FileOutputStream(targetFile));
+//		PMMLUtil.marshal(pmml, HDFSFileSystem.fileSystem.create(new Path(targetFile)));
 	}
 
 }
