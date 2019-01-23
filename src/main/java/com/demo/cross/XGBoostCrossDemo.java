@@ -22,11 +22,11 @@ import java.util.Map;
  * @author allen
  * @date 2019/1/21.
  */
-public class XgboostCrossDemo extends AbstractSparkSql {
+public class XGBoostCrossDemo extends AbstractSparkSql {
 
 	@Override
 	public void executeProgram(String[] args, SparkSession spark) throws IOException {
-		Dataset<Row> tableData=spark.sql("select * from tmp_trafficwisdom.ml_train_data where future_day>0 ")
+		Dataset<Row> tableData=spark.sql("select * from tmp_trafficwisdom.ml_train_data where future_day>=0 ")
 				.drop("userid,city,from_place,to_place,start_city_name,end_city_name,start_city_id,end_city_id".split(","));
 
 		String[] features=new String[]{
@@ -68,8 +68,8 @@ public class XgboostCrossDemo extends AbstractSparkSql {
 
 		ParamMap[] paramGrid=new ParamGridBuilder()
 				.addGrid(xgBoostEstimator.maxDepth(),new int[]{4,6,8})
-				.addGrid(xgBoostEstimator.eta(),new double[]{0.1,0.2,0.3})
-				.addGrid(xgBoostEstimator.lambda(),new double[]{0.1,0.3,0.6})
+//				.addGrid(xgBoostEstimator.eta(),new double[]{0.1,0.2,0.3})
+//				.addGrid(xgBoostEstimator.lambda(),new double[]{0.1,0.3,0.6})
 //				.addGrid(xgBoostEstimator.minChildWeight(),new double[]{1.0,3.0,5.0})
 				.build();
 
@@ -93,19 +93,19 @@ public class XgboostCrossDemo extends AbstractSparkSql {
 
 
 		trainData.unpersist();
-
-		Dataset<Row> testData=assembler.transform(spark.sql("select * from tmp_trafficwisdom.ml_test_data "));
-		Dataset<Row> testResult=xgBestModel.transform(testData);
-
-		Double aucArea=evaluator.evaluate(testResult);
-		System.out.println("------------------test result predict----------------");
-		System.out.println("auc is :"+aucArea);
+//
+//		Dataset<Row> testData=assembler.transform(spark.sql("select * from tmp_trafficwisdom.ml_test_data "));
+//		Dataset<Row> testResult=xgBestModel.transform(testData);
+//
+//		Double aucArea=evaluator.evaluate(testResult);
+//		System.out.println("------------------test result predict----------------");
+//		System.out.println("auc is :"+aucArea);
 
 
 	}
 
 	public static void main(String[] args) throws IOException {
-		XgboostCrossDemo xgboostCrossDemo=new XgboostCrossDemo();
+		XGBoostCrossDemo xgboostCrossDemo=new XGBoostCrossDemo();
 		xgboostCrossDemo.runAll(args,true);
 	}
 }
