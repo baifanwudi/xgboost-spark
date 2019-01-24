@@ -5,8 +5,9 @@ import com.demo.base.HDFSFileSystem;
 import com.demo.util.CommonUtil;
 import ml.dmlc.xgboost4j.java.XGBoostError;
 import ml.dmlc.xgboost4j.scala.spark.XGBoostClassificationModel;
-import ml.dmlc.xgboost4j.scala.spark.XGBoostEstimator;
 
+
+import ml.dmlc.xgboost4j.scala.spark.XGBoostClassifier;
 import org.apache.hadoop.fs.Path;
 import org.apache.spark.ml.Pipeline;
 import org.apache.spark.ml.PipelineModel;
@@ -41,7 +42,8 @@ public class XGBoostLocalDemo {
 				.option("inferschema", "true")
 				.option("header", "true")
 				.option("encoding", "gbk")
-				.csv("/Users/AllenBai/data/ml_offical_data.csv").drop("create_time");
+				.csv("/Users/AllenBai/data/ml_offical_data.csv")
+				.drop("userid,city,from_place,to_place,start_city_name,end_city_name,start_city_id,end_city_id,create_date".split(","));;
 
 		trainData.printSchema();
 		trainData.show(false);
@@ -63,16 +65,20 @@ public class XGBoostLocalDemo {
 		Map<String,Object> javaMap=new HashMap<>();
 		javaMap.put("objective","binary:logistic");
 		javaMap.put("eta",0.1);
-		javaMap.put("max_depth",9);
-		javaMap.put("min_child_weight",5);
+		javaMap.put("max_depth",7);
+		javaMap.put("min_child_weight",1);
 		javaMap.put("alpha",1);
 		javaMap.put("eval_metric","logloss");
 		javaMap.put("num_round","20");
 		javaMap.put("missing",-1);
-
+		javaMap.put("num_workers",4);
+		javaMap.put("num_early_stopping_rounds",20);
+		javaMap.put("maximize_evaluation_metrics",false);
+		javaMap.put("silent",1);
+		javaMap.put("seed",2019L);
 		CommonUtil.toScalaImmutableMap(javaMap);
-		XGBoostEstimator xgBoostEstimator=new XGBoostEstimator( CommonUtil.<String,Object>toScalaImmutableMap(javaMap))
-				.setFeaturesCol("features").setLabelCol("isclick");
+		XGBoostClassifier xgBoostEstimator=new XGBoostClassifier( CommonUtil.<String,Object>toScalaImmutableMap(javaMap))
+				.setFeaturesCol("features").setLabelCol("isclick").setProbabilityCol("probabilities");
 
 		Pipeline pipeline = new Pipeline()
 				.setStages(new PipelineStage[]{assembler,xgBoostEstimator});
@@ -87,10 +93,11 @@ public class XGBoostLocalDemo {
 		System.out.println(xgBoostClassificationModel.extractParamMap());
 		//evaluate
 		BinaryClassificationEvaluator evaluator=new BinaryClassificationEvaluator().setLabelCol("isclick").setRawPredictionCol("probabilities");
+//				.setRawPredictionCol("probability");
 		Double aucArea=evaluator.evaluate(predictResult);
 		System.out.println("auc is :"+aucArea);
 
-//		pipelineModel.write().overwrite().save("file:///model/xgboost/pipemodel");
+		pipelineModel.write().overwrite().save("/data/twms/traffichuixing/model/xgboost");
 		savePMML(trainData.schema(),pipelineModel);
 
 	}

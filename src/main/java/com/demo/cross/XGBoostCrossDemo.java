@@ -3,7 +3,7 @@ package com.demo.cross;
 import com.demo.base.AbstractSparkSql;
 import com.demo.util.CommonUtil;
 import ml.dmlc.xgboost4j.scala.spark.XGBoostClassificationModel;
-import ml.dmlc.xgboost4j.scala.spark.XGBoostEstimator;
+import ml.dmlc.xgboost4j.scala.spark.XGBoostClassifier;
 import org.apache.spark.ml.evaluation.BinaryClassificationEvaluator;
 import org.apache.spark.ml.feature.VectorAssembler;
 import org.apache.spark.ml.param.ParamMap;
@@ -26,6 +26,7 @@ public class XGBoostCrossDemo extends AbstractSparkSql {
 
 	@Override
 	public void executeProgram(String[] args, SparkSession spark) throws IOException {
+
 		Dataset<Row> tableData=spark.sql("select * from tmp_trafficwisdom.ml_train_data where future_day>=0 ")
 				.drop("userid,city,from_place,to_place,start_city_name,end_city_name,start_city_id,end_city_id".split(","));
 
@@ -47,43 +48,52 @@ public class XGBoostCrossDemo extends AbstractSparkSql {
 		Map<String,Object> javaMap=new HashMap<>(12);
 		javaMap.put("objective","binary:logistic");
 		//learning_rate
-		javaMap.put("eta",0.1);
-		javaMap.put("max_depth",9);
-		javaMap.put("min_child_weight",5);
+		javaMap.put("eta",0.3);
+		javaMap.put("max_depth",8);
+		javaMap.put("min_child_weight",1);
 		//L2
-		javaMap.put("lambda",0.2);
+		javaMap.put("lambda",0.1);
 		javaMap.put("eval_metric","logloss");
-		javaMap.put("num_round","150");
+		javaMap.put("num_round","70");
 		javaMap.put("missing",-99);
+		javaMap.put("num_early_stopping_rounds",20);
+		javaMap.put("maximize_evaluation_metrics",false);
 		//default 1,提高并行度
-		javaMap.put("nworkers",32);
-		javaMap.put("numEarlyStoppingRounds",20);
-		javaMap.put("checkpoint_path","/data/twms/traffichuixing/checkpoint/xgboost");
+		javaMap.put("num_workers",24);
+		javaMap.put("silent",1);
+		//注意0.81有一个bug，必须设置seed为long类型，要不保存model会报错。
+		javaMap.put("seed",2019L);
 		CommonUtil.toScalaImmutableMap(javaMap);
-		XGBoostEstimator xgBoostEstimator=new XGBoostEstimator( CommonUtil.<String,Object>toScalaImmutableMap(javaMap))
-				.setFeaturesCol("features").setLabelCol("isclick");
-
-
+		XGBoostClassifier xgBoostClassifier=new XGBoostClassifier( CommonUtil.<String,Object>toScalaImmutableMap(javaMap))
+				.setFeaturesCol("features").setLabelCol("isclick").setProbabilityCol("probabilities");
 		BinaryClassificationEvaluator evaluator=new BinaryClassificationEvaluator().setLabelCol("isclick").setRawPredictionCol("probabilities");
 
-
+		/**
+		 * max_depth:8
+		 * eta:0.3
+		 * lambda:0.1
+		 * num_round:70
+		 * min_child_weight:1
+		 */
 		ParamMap[] paramGrid=new ParamGridBuilder()
-				.addGrid(xgBoostEstimator.maxDepth(),new int[]{4,6,8})
-				.addGrid(xgBoostEstimator.round(),new int[]{40,70,100})
-//				.addGrid(xgBoostEstimator.eta(),new double[]{0.1,0.2,0.3})
-//				.addGrid(xgBoostEstimator.lambda(),new double[]{0.1,0.3,0.6})
-//				.addGrid(xgBoostEstimator.minChildWeight(),new double[]{1.0,3.0,5.0})
+				.addGrid(xgBoostClassifier.maxDepth(),new int[]{7,8,9})
+//				.addGrid(xgBoostClassifier.numRound(),new int[]{60,70,80})
+				.addGrid(xgBoostClassifier.eta(),new double[]{0.3,0.4})
+				.addGrid(xgBoostClassifier.lambda(),new double[]{0.05,0.1,0.2})
+//				.addGrid(xgBoostClassifier.minChildWeight(),new double[]{1.0,3.0,5.0})
 				.build();
 
-		CrossValidator crossValidator=new CrossValidator().setEstimator(xgBoostEstimator)
-				.setEvaluator(evaluator).setEstimatorParamMaps(paramGrid).setNumFolds(4);
+		CrossValidator crossValidator=new CrossValidator().setEstimator(xgBoostClassifier)
+				.setEvaluator(evaluator).setEstimatorParamMaps(paramGrid).setNumFolds(5);
 
 		CrossValidatorModel cvModel=crossValidator.fit(trainData);
+
 
 		XGBoostClassificationModel xgBestModel=(XGBoostClassificationModel)(cvModel.bestModel());
 		ParamMap[] paramMaps=cvModel.getEstimatorParamMaps();
 		double[] aucAreas=cvModel.avgMetrics();
 
+		System.out.println("------------------------------------");
 		for(int i=0;i<paramMaps.length;i++){
 			System.out.println("--------------"+i+"----------------");
 			System.out.println("param:"+paramMaps[i]);
@@ -93,16 +103,19 @@ public class XGBoostCrossDemo extends AbstractSparkSql {
 		System.out.println("---------best param is :---------------");
 		System.out.println(xgBestModel.extractParamMap());
 
-
+		System.out.println("--------------------------------------");
 		trainData.unpersist();
-//
+
+		cvModel.write().overwrite().save("/data/twms/traffichuixing/model/crossxgboost");
+		xgBestModel.write().overwrite().save("/data/twms/traffichuixing/model/xgboost/");
+
 //		Dataset<Row> testData=assembler.transform(spark.sql("select * from tmp_trafficwisdom.ml_test_data "));
 //		Dataset<Row> testResult=xgBestModel.transform(testData);
 //
 //		Double aucArea=evaluator.evaluate(testResult);
 //		System.out.println("------------------test result predict----------------");
 //		System.out.println("auc is :"+aucArea);
-
+//		System.out.println("---------------------------------------------------");
 
 	}
 
