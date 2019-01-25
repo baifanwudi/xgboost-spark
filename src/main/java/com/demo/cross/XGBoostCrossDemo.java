@@ -48,11 +48,11 @@ public class XGBoostCrossDemo extends AbstractSparkSql {
 		Map<String,Object> javaMap=new HashMap<>(12);
 		javaMap.put("objective","binary:logistic");
 		//learning_rate
-		javaMap.put("eta",0.3);
-		javaMap.put("max_depth",8);
+		javaMap.put("eta",0.25);
+		javaMap.put("max_depth",9);
 		javaMap.put("min_child_weight",1);
 		//L2
-		javaMap.put("lambda",0.1);
+		javaMap.put("lambda",0.0001);
 		javaMap.put("eval_metric","logloss");
 		javaMap.put("num_round","70");
 		javaMap.put("missing",-99);
@@ -69,17 +69,17 @@ public class XGBoostCrossDemo extends AbstractSparkSql {
 		BinaryClassificationEvaluator evaluator=new BinaryClassificationEvaluator().setLabelCol("isclick").setRawPredictionCol("probabilities");
 
 		/**
-		 * max_depth:8
-		 * eta:0.3
-		 * lambda:0.1
-		 * num_round:70
+		 * max_depth:9
+		 * eta:0.25
+		 * lambda:0.0001
+		 * num_round:65
 		 * min_child_weight:1
 		 */
 		ParamMap[] paramGrid=new ParamGridBuilder()
-				.addGrid(xgBoostClassifier.maxDepth(),new int[]{7,8,9})
-//				.addGrid(xgBoostClassifier.numRound(),new int[]{60,70,80})
-				.addGrid(xgBoostClassifier.eta(),new double[]{0.3,0.4})
-				.addGrid(xgBoostClassifier.lambda(),new double[]{0.05,0.1,0.2})
+//				.addGrid(xgBoostClassifier.maxDepth(),new int[]{7,8,9})
+				.addGrid(xgBoostClassifier.numRound(),new int[]{65,70,75})
+				.addGrid(xgBoostClassifier.eta(),new double[]{0.25,0.3,0.35})
+				.addGrid(xgBoostClassifier.lambda(),new double[]{0.001,0.02,0.05})
 //				.addGrid(xgBoostClassifier.minChildWeight(),new double[]{1.0,3.0,5.0})
 				.build();
 
@@ -106,7 +106,7 @@ public class XGBoostCrossDemo extends AbstractSparkSql {
 		System.out.println("--------------------------------------");
 		trainData.unpersist();
 
-		cvModel.write().overwrite().save("/data/twms/traffichuixing/model/crossxgboost");
+		cvModel.write().overwrite().save("/data/twms/traffichuixing/model/cross-xgboost");
 		xgBestModel.write().overwrite().save("/data/twms/traffichuixing/model/xgboost/");
 
 //		Dataset<Row> testData=assembler.transform(spark.sql("select * from tmp_trafficwisdom.ml_test_data "));
