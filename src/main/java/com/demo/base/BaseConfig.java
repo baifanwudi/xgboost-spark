@@ -1,5 +1,9 @@
 package com.demo.base;
 
+/**
+ * @author AllenBai
+ */
+
 public class BaseConfig {
     /**
      *hdfs前缀

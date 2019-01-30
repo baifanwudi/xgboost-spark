@@ -6,7 +6,7 @@ import java.util.Map;
 import java.util.Properties;
 
 /**
- * Created by yn48926 on 2017/11/3.
+ * @author AllenBai
  */
 public class ConfigUtil {
 

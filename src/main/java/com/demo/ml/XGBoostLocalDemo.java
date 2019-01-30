@@ -1,14 +1,10 @@
 package com.demo.ml;
 
 
-import com.demo.base.HDFSFileSystem;
 import com.demo.util.CommonUtil;
 import ml.dmlc.xgboost4j.java.XGBoostError;
 import ml.dmlc.xgboost4j.scala.spark.XGBoostClassificationModel;
-
-
 import ml.dmlc.xgboost4j.scala.spark.XGBoostClassifier;
-import org.apache.hadoop.fs.Path;
 import org.apache.spark.ml.Pipeline;
 import org.apache.spark.ml.PipelineModel;
 import org.apache.spark.ml.PipelineStage;
@@ -34,7 +30,7 @@ import java.util.Map;
  */
 public class XGBoostLocalDemo {
 
-	public static void main(String[] args) throws IOException, XGBoostError, JAXBException {
+	public static void main(String[] args) throws IOException, JAXBException {
 
 		SparkSession spark =SparkSession.builder().master("local[*]").getOrCreate();
 
@@ -42,7 +38,7 @@ public class XGBoostLocalDemo {
 				.option("inferschema", "true")
 				.option("header", "true")
 				.option("encoding", "gbk")
-				.csv("/Users/AllenBai/data/ml_offical_data.csv")
+				.csv("data/ml_offical_data.csv")
 				.drop("userid,city,from_place,to_place,start_city_name,end_city_name,start_city_id,end_city_id,create_date".split(","));;
 
 		trainData.printSchema();
@@ -93,7 +89,6 @@ public class XGBoostLocalDemo {
 		System.out.println(xgBoostClassificationModel.extractParamMap());
 		//evaluate
 		BinaryClassificationEvaluator evaluator=new BinaryClassificationEvaluator().setLabelCol("isclick").setRawPredictionCol("probabilities");
-//				.setRawPredictionCol("probability");
 		Double aucArea=evaluator.evaluate(predictResult);
 		System.out.println("auc is :"+aucArea);
 
@@ -106,7 +101,6 @@ public class XGBoostLocalDemo {
 		PMML pmml = new PMMLBuilder(shcema, pipelineModel).build();
 		String targetFile = "/data/twms/traffichuixing/model/xgboost-pmml";
         PMMLUtil.marshal(pmml, new FileOutputStream(targetFile));
-//		PMMLUtil.marshal(pmml, HDFSFileSystem.fileSystem.create(new Path(targetFile)));
 	}
 
 }
